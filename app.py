@@ -30,8 +30,9 @@ if uploaded_file is not None:
         with st.spinner("Analisando logs..."):
             prompt = f"Analise estes logs de segurança e aponte riscos:\n\n{df.to_string()}"
             response = client.models.generate_content(
-                model='gemini-2.5-flash',
-                contents=prompt
+    model='gemini-2.5-flash', # Verifique se a sua chave suporta este modelo ou troque para 'gemini-1.5-flash'
+    contents=prompt
+)
             )
             st.subheader("📊 Relatório de Auditoria da IA")
             st.write(response.text)
