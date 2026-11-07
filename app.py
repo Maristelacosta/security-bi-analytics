@@ -32,7 +32,7 @@ if uploaded_file is not None:
             response = client.models.generate_content(
     model='gemini-2.5-flash', # Verifique se a sua chave suporta este modelo ou troque para 'gemini-1.5-flash'
     contents=prompt
-)
-            )
+
+            
             st.subheader("📊 Relatório de Auditoria da IA")
             st.write(response.text)
