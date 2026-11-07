@@ -31,7 +31,7 @@ if uploaded_file is not None:
             prompt = f"Analise estes logs de segurança e aponte riscos:\n\n{df.to_string()}"
             
             response = client.models.generate_content(
-                model='gemini-3.8-flash',
+                model='gemini-1.5-flash',
                 contents=prompt
             )
             
