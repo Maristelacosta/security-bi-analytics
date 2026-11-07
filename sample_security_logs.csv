@@ -3,3 +3,8 @@ carimbo de data/hora,usuário,tipo_de_ação,endereço_ip,http_status
 2026-06-02 10:05:12,analista.bi,EXPORT_DATABASE,45.15.188.20,403
 2026-06-02 10:10:30,dev.sec,ACESSO A DADOS SENSÍVEIS,192.168.1.50,200
 2026-06-02 10:15:45,usuário externo,FALHA NO LOGIN	192.168.1.99	401
+carimbo de data/hora,usuário,tipo_de_ação,endereço_ip,http_status
+2026-06-02 10:00:00,maristela.costa,LOGIN_SUCESSO,192.168.1.10,200
+2026-06-02 10:05:12,analista.bi,EXPORT_DATABASE,45.15.188.20,403
+2026-06-02 10:10:30,dev.sec,ACESSO_DADOS_SENSIVEIS,192.168.1.50,200
+2026-06-02 10:15:45,usuario.externo,FALHA_LOGIN,192.168.1.99,401
