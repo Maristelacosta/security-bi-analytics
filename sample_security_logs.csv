@@ -1,0 +1,5 @@
+timestamp,user,action_type,ip_address,http_status
+2026-06-02 10:00:00,maristela.costa,LOGIN_SUCCESS,192.168.1.10,200
+2026-06-02 10:05:12,analista.bi,EXPORT_DATABASE,45.15.188.20,403
+2026-06-02 10:10:30,dev.sec,ACCESS_SENSITIVE_DATA,192.168.1.50,200
+2026-06-02 10:15:45,usuario.externo,LOGIN_FAILED,192.168.1.99,401
