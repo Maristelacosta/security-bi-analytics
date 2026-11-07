@@ -30,8 +30,9 @@ if uploaded_file is not None:
         with st.spinner("Analisando logs..."):
             prompt = f"Analise estes logs de segurança e aponte riscos:\n\n{df.to_string()}"
             
+            # Chamada corrigida utilizando o modelo padrão suportado
             response = client.models.generate_content(
-                model='gemini-1.5-flash',
+                model='gemini-2.5-flash',
                 contents=prompt
             )
             
