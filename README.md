@@ -1,28 +1,290 @@
-Maristelacosta
-segurança-bi-análise
-Público
-Acesse o arquivo
-t
-T
-Maristelacosta
-Maristelacosta
-Atualize os comentários e o pedido de auditoria de segurança.
+import streamlit as st
+import pandas as pd
+import plotly.express as px
 
- · 
-há 3 minutos
-Nome		
-README.md
-Atualizar README.md
-há 3 horas
-app.py
-Atualize os comentários e o pedido de auditoria de segurança.
-há 3 minutos
-requisitos.txt
-Atualize os nomes dos pacotes em requirements.txt
-há 10 minutos
-sample_security_logs.csv
-Atualizar registros de segurança com cabeçalhos e correções.
-há 1 hora
-Navegação entre arquivos do repositório
-LEIA-ME
-🛡️ Central de Conformidad
+# =====================================
+# CONFIGURAÇÃO DA PÁGINA
+# =====================================
+st.set_page_config(
+    page_title="BI Analytics Dashboard",
+    page_icon="📊",
+    layout="wide"
+)
+
+# =====================================
+# ESTILIZAÇÃO VISUAL (CSS)
+# =====================================
+st.markdown("""
+    <style>
+    /* Estilização dos cartões de métricas (KPIs) */
+    [data-testid="stMetric"] {
+        background-color: rgba(128, 128, 128, 0.08);
+        border: 1px solid rgba(128, 128, 128, 0.2);
+        border-left: 5px solid #1f77b4;
+        padding: 15px 20px;
+        border-radius: 10px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+    /* Ajuste do tamanho do rótulo dos KPIs */
+    [data-testid="stMetricLabel"] {
+        font-size: 0.95rem;
+        font-weight: 600;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+# =====================================
+# FUNÇÕES AUXILIARES
+# =====================================
+def formatar_brl(valor):
+    return f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+@st.cache_data
+def carregar_dados(arquivo_upload):
+    colunas_esperadas = {"Data", "Regiao", "Categoria", "Produto", "Valor", "Quantidade"}
+    
+    try:
+        if arquivo_upload is not None:
+            df = pd.read_csv(arquivo_upload, parse_dates=["Data"])
+        else:
+            df = pd.read_csv("dados/vendas.csv", parse_dates=["Data"])
+            
+        if not colunas_esperadas.issubset(df.columns):
+            faltantes = colunas_esperadas - set(df.columns)
+            st.error(f"O arquivo CSV não possui as colunas obrigatórias: {', '.join(faltantes)}")
+            st.stop()
+            
+        return df
+    except FileNotFoundError:
+        st.warning("Arquivo padrão 'dados/vendas.csv' não encontrado. Faça o upload de um CSV na barra lateral.")
+        st.stop()
+    except Exception as e:
+        st.error(f"Erro ao ler o arquivo: {e}")
+        st.stop()
+
+# =====================================
+# BARRA LATERAL: UPLOAD E METAS
+# =====================================
+st.sidebar.header("📂 Fonte de Dados")
+arquivo_csv = st.sidebar.file_uploader(
+    "Carregar novo CSV (opcional)",
+    type=["csv"],
+    help="O arquivo deve conter: Data, Regiao, Categoria, Produto, Valor e Quantidade."
+)
+
+df = carregar_dados(arquivo_csv)
+
+st.sidebar.divider()
+st.sidebar.header("🎯 Metas")
+meta_faturamento = st.sidebar.number_input(
+    "Meta de Faturamento (R$)",
+    min_value=0.0,
+    value=float(df["Valor"].sum() * 0.8),  # Sugere 80% do total como padrão
+    step=1000.0,
+    format="%.2f"
+)
+
+# =====================================
+# TÍTULO
+# =====================================
+st.title("📊 BI Analytics Dashboard")
+st.subheader("Painel Executivo de Vendas")
+
+# =====================================
+# FILTROS (BARRA LATERAL)
+# =====================================
+st.sidebar.divider()
+st.sidebar.header("🔎 Filtros")
+
+data_min = df["Data"].min().date()
+data_max = df["Data"].max().date()
+
+intervalo_datas = st.sidebar.date_input(
+    "Período",
+    value=(data_min, data_max),
+    min_value=data_min,
+    max_value=data_max
+)
+
+regioes = st.sidebar.multiselect(
+    "Região",
+    options=sorted(df["Regiao"].unique()),
+    default=sorted(df["Regiao"].unique())
+)
+
+categorias = st.sidebar.multiselect(
+    "Categoria",
+    options=sorted(df["Categoria"].unique()),
+    default=sorted(df["Categoria"].unique())
+)
+
+produtos_disponiveis = sorted(df[df["Categoria"].isin(categorias)]["Produto"].unique())
+produtos = st.sidebar.multiselect(
+    "Produto",
+    options=produtos_disponiveis,
+    default=produtos_disponiveis
+)
+
+# =====================================
+# DADOS FILTRADOS
+# =====================================
+if len(intervalo_datas) == 2:
+    data_inicio, data_fim = intervalo_datas
+    filtro_data = (df["Data"].dt.date >= data_inicio) & (df["Data"].dt.date <= data_fim)
+else:
+    filtro_data = True
+
+df_filtrado = df[
+    filtro_data
+    & (df["Regiao"].isin(regioes))
+    & (df["Categoria"].isin(categorias))
+    & (df["Produto"].isin(produtos))
+]
+
+if df_filtrado.empty:
+    st.warning("⚠️ Nenhum dado encontrado para os filtros selecionados. Ajuste as opções na barra lateral.")
+    st.stop()
+
+# =====================================
+# KPIs E PROGRESSO DA META
+# =====================================
+faturamento = df_filtrado["Valor"].sum()
+quantidade = df_filtrado["Quantidade"].sum()
+ticket_medio = faturamento / quantidade if quantidade > 0 else 0
+produto_lider = df_filtrado.groupby("Produto")["Valor"].sum().idxmax()
+
+# Cálculo de atingimento da meta
+diferenca_meta = faturamento - meta_faturamento
+percentual_meta = (faturamento / meta_faturamento * 100) if meta_faturamento > 0 else 0
+
+col1, col2, col3, col4 = st.columns(4)
+
+col1.metric(
+    "💰 Faturamento",
+    formatar_brl(faturamento),
+    delta=f"{formatar_brl(diferenca_meta)} ({percentual_meta:.1f}% da meta)" if meta_faturamento > 0 else None
+)
+col2.metric("📦 Quantidade", f"{quantidade:,}".replace(",", "."))
+col3.metric("🧾 Ticket Médio", formatar_brl(ticket_medio))
+col4.metric("🏆 Produto Líder", produto_lider)
+
+# Barra de progresso visual da meta
+if meta_faturamento > 0:
+    progresso = min(faturamento / meta_faturamento, 1.0)
+    st.progress(progresso, text=f"Progresso da Meta: {percentual_meta:.1f}% concluído ({formatar_brl(faturamento)} de {formatar_brl(meta_faturamento)})")
+
+st.divider()
+
+# =====================================
+# GRÁFICOS
+# =====================================
+col_esq, col_dir = st.columns(2)
+
+with col_esq:
+    st.subheader("📈 Vendas por Produto")
+    vendas_produto = (
+        df_filtrado.groupby("Produto")["Valor"]
+        .sum()
+        .reset_index()
+        .sort_values(by="Valor", ascending=False)
+    )
+    fig_produto = px.bar(
+        vendas_produto,
+        x="Produto",
+        y="Valor",
+        color="Produto",
+        text_auto=".2s"
+    )
+    fig_produto.update_layout(showlegend=False, margin=dict(t=20, b=20))
+    st.plotly_chart(fig_produto, width="stretch")
+
+with col_dir:
+    st.subheader("🌎 Participação por Região")
+    vendas_regiao = (
+        df_filtrado.groupby("Regiao")["Valor"]
+        .sum()
+        .reset_index()
+    )
+    fig_regiao = px.pie(
+        vendas_regiao,
+        names="Regiao",
+        values="Valor",
+        hole=0.45
+    )
+    fig_regiao.update_layout(margin=dict(t=20, b=20))
+    st.plotly_chart(fig_regiao, width="stretch")
+
+# =====================================
+# CATEGORIAS
+# =====================================
+st.subheader("📊 Faturamento por Categoria")
+categoria_df = (
+    df_filtrado.groupby("Categoria")["Valor"]
+    .sum()
+    .reset_index()
+    .sort_values(by="Valor", ascending=False)
+)
+fig_categoria = px.bar(
+    categoria_df,
+    x="Categoria",
+    y="Valor",
+    color="Categoria",
+    text_auto=".2s"
+)
+fig_categoria.update_layout(showlegend=False, margin=dict(t=20, b=20))
+st.plotly_chart(fig_categoria, width="stretch")
+
+# =====================================
+# EVOLUÇÃO TEMPORAL
+# =====================================
+st.subheader("📅 Evolução das Vendas")
+vendas_tempo = (
+    df_filtrado.groupby("Data")["Valor"]
+    .sum()
+    .reset_index()
+    .sort_values("Data")
+)
+fig_tempo = px.line(
+    vendas_tempo,
+    x="Data",
+    y="Valor",
+    markers=True
+)
+# Adiciona linha de média diária no gráfico
+media_diaria = vendas_tempo["Valor"].mean()
+fig_tempo.add_hline(
+    y=media_diaria,
+    line_dash="dash",
+    line_color="orange",
+    annotation_text=f"Média: {formatar_brl(media_diaria)}",
+    annotation_position="top left"
+)
+fig_tempo.update_layout(margin=dict(t=20, b=20))
+st.plotly_chart(fig_tempo, width="stretch")
+
+# =====================================
+# TABELA E DOWNLOAD
+# =====================================
+st.subheader("📋 Dados Detalhados")
+st.dataframe(
+    df_filtrado.sort_values("Data", ascending=False),
+    width="stretch",
+    hide_index=True
+)
+
+csv = df_filtrado.to_csv(index=False).encode("utf-8-sig")
+
+st.download_button(
+    "⬇️ Baixar Relatório CSV",
+    data=csv,
+    file_name="relatorio_vendas.csv",
+    mime="text/csv"
+)
+
+# =====================================
+# RODAPÉ
+# =====================================
+st.markdown("---")
+st.caption(
+    "Desenvolvido por Maristela Costa • BI Analytics Dashboard • Python • Streamlit • Pandas • Plotly"
+)
