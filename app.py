@@ -15,7 +15,7 @@ if not api_key:
     st.warning("⚠️ Insira a sua chave de API do Gemini para liberar as ferramentas de análise.")
     st.stop()
 
-# Configura a chave no SDK clássico do Gemini
+# Configura a chave no SDK do Gemini
 genai.configure(api_key=api_key)
 
 # Upload do arquivo CSV de logs
@@ -28,9 +28,9 @@ if uploaded_file is not None:
     
     if st.button("🤖 Executar Auditoria de Segurança com IA"):
         with st.spinner("Analisando logs..."):
-            prompt = f"Analise estes logs de segurança e aponte riscos ou falhas:\n\n{df.to_string()}"
+            prompt = f"Analise estes logs de segurança e aponte riscos ou falhas detalhadas:\n\n{df.to_string()}"
             
-            # Utiliza o modelo flash padrão e estável
+            # Utiliza o modelo correto suportado pelo generativeai
             model = genai.GenerativeModel('gemini-1.5-flash')
             response = model.generate_content(prompt)
             
